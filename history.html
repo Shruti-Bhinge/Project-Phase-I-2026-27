@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<script>
+  if (location.port === '5500') {
+    location.replace('http://localhost/phishshield/history.html');
+  }
+</script>
+<title>PhishShield AI · History</title>
+<script>
+  try {
+    const current = JSON.parse(sessionStorage.getItem('ps_current') || 'null');
+    if (!current || !current.email || !current.name) window.location.replace('login.html');
+  } catch (err) {
+    window.location.replace('login.html');
+  }
+</script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" />
+<script>
+  try {
+    if (localStorage.getItem('ps_theme') === 'dark') document.documentElement.classList.add('dark');
+  } catch (err) {
+    console.error('Could not load saved theme:', err);
+  }
+</script>
+<style>
+  :root { --bg-grad: linear-gradient(145deg,#eef5fb,#e2ebf3); --card-bg: rgba(255,255,255,.8); --text: #0a1e2f; --subtext: #5a7a94; }
+  html.dark { --bg-grad: linear-gradient(145deg,#0a1622,#0f2233); --card-bg: rgba(20,35,50,.7); --text: #e6f0f9; --subtext: #8fa8bd; }
+  * { margin:0; padding:0; box-sizing:border-box; font-family:'Segoe UI', Roboto, sans-serif; }
+  body { background: var(--bg-grad); min-height:100vh; padding:1.5rem; }
+  .wrap { max-width:1100px; margin:0 auto; }
+
+  .topbar {
+    display:flex; justify-content:space-between; align-items:center;
+    background: var(--card-bg); backdrop-filter: blur(14px);
+    border-radius:24px; padding:0.9rem 1.6rem;
+    border:1px solid rgba(255,255,255,0.8);
+    box-shadow:0 8px 24px rgba(0,40,80,0.06);
+    margin-bottom:1.5rem; flex-wrap:wrap; gap:12px;
+  }
+  .topbar .brand { display:flex; align-items:center; gap:12px; }
+  .topbar .brand .ico {
+    width:40px; height:40px; border-radius:12px;
+    background: linear-gradient(135deg, #0b2b4b, #1a4b6d);
+    display:flex; align-items:center; justify-content:center;
+    color:#fff; font-size:20px;
+  }
+  .topbar .brand h1 { font-size:1.15rem; color:var(--text); }
+  .theme-toggle { width:38px; height:38px; border:0; border-radius:12px; background:var(--card-bg); color:var(--text); cursor:pointer; font-size:1rem; }
+  .back {
+    background:#e6f0f9; color:#0a2a42; border:none; padding:0.5rem 1.1rem;
+    border-radius:12px; font-weight:600; cursor:pointer; font-size:0.85rem;
+    display:inline-flex; align-items:center; gap:8px; text-decoration:none; transition:0.15s;
+  }
+  .back:hover { background:#d3e5f5; }
+  .clear-btn {
+    background:#fde8e8; color:#b13e3e; border:none; padding:0.5rem 1.1rem;
+    border-radius:12px; font-weight:600; cursor:pointer; font-size:0.85rem;
+    display:inline-flex; align-items:center; gap:8px; transition:0.15s;
+  }
+  .clear-btn:hover { background:#f8d0d0; }
+
+  .filters { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:1.2rem; }
+  .filter-btn {
+    padding:0.5rem 1.2rem; border-radius:60px; border:1px solid rgba(255,255,255,0.9);
+    background: var(--card-bg); cursor:pointer; font-weight:600;
+    font-size:0.85rem; color:#4a6d85; transition:0.15s;
+  }
+  .filter-btn:hover, .filter-btn.active { background:#0b2b4b; color:#fff; border-color:#0b2b4b; }
+
+  .history-panel {
+    background: var(--card-bg); backdrop-filter:blur(12px);
+    border-radius:24px; padding:1.5rem;
+    border:1px solid rgba(255,255,255,0.9);
+    box-shadow:0 12px 36px rgba(0,40,80,0.08);
+  }
+  .history-item { cursor:pointer; }
+  .modal-backdrop { display:none; position:fixed; inset:0; z-index:1000; padding:1.5rem; background:rgba(5,25,43,0.55); align-items:center; justify-content:center; }
+  .modal-backdrop.show { display:flex; }
+  .detail-modal { width:min(700px,100%); max-height:85vh; overflow:auto; background:var(--card-bg); color:var(--text); border-radius:22px; padding:1.5rem; box-shadow:0 20px 60px rgba(0,0,0,0.2); }
+  .detail-header { display:flex; justify-content:space-between; align-items:center; gap:12px; margin-bottom:1rem; color:var(--text); }
+  .modal-close { border:0; background:#e6f0f9; border-radius:10px; padding:0.55rem 0.8rem; cursor:pointer; }
+  .detail-metrics { color:#1a3346; line-height:1.8; }
+  .detail-content { white-space:pre-wrap; overflow-wrap:anywhere; background:#f2f7fb; border-radius:12px; padding:0.8rem; margin-top:0.8rem; }
+  .export-btn { background:#e6f0f9; color:#0a2a42; border:none; padding:0.5rem 1.1rem; border-radius:12px; font-weight:600; cursor:pointer; }
+
+  .empty { text-align:center; padding:3rem 1rem; color:#6a8399; }
+  .empty i { font-size:3rem; color:#c9d8e5; margin-bottom:1rem; display:block; }
+  .empty h3 { color:var(--text); margin-bottom:0.4rem; }
+  .empty p { font-size:0.9rem; }
+
+  .history-item {
+    display:grid; grid-template-columns: 60px 1fr auto;
+    gap:14px; align-items:center; padding:1rem;
+    border-bottom:1px solid rgba(0,0,0,0.05);
+    transition:0.15s;
+  }
+  .history-item:last-child { border-bottom:none; }
+  .history-item:hover { background: rgba(230,240,249,0.5); border-radius:14px; }
+
+  .h-ico {
+    width:48px; height:48px; border-radius:14px; display:flex; align-items:center; justify-content:center;
+    color:#fff; font-size:20px;
+  }
+  .h-ico.safe    { background: linear-gradient(135deg,#3eb87a,#1b6d4a); }
+  .h-ico.phishing{ background: linear-gradient(135deg,#e05a5a,#b13e3e); }
+  .h-ico.caution { background: linear-gradient(135deg,#e0a94a,#b1761f); }
+
+  .h-body .preview { color:var(--text); font-weight:600; font-size:0.9rem; word-break:break-word; }
+  .h-body .meta { color:var(--subtext); font-size:0.78rem; margin-top:4px; display:flex; gap:12px; flex-wrap:wrap; }
+  .h-body .meta span i { margin-right:4px; }
+
+  .h-status {
+    padding:4px 12px; border-radius:20px; font-size:0.72rem; font-weight:700; letter-spacing:0.4px;
+  }
+  .h-status.safe    { background:#d9f2e3; color:#0f5132; }
+  .h-status.phishing{ background:#fde2e2; color:#b13e3e; }
+  .h-status.caution { background:#fdf0d5; color:#a06a1a; }
+
+  @media (max-width:600px) {
+    .history-item { grid-template-columns: 48px 1fr; }
+    .h-status { grid-column: 2; justify-self:flex-start; }
+  }
+  @media print {
+    .modal-backdrop { background:#fff!important; }
+    .detail-modal { box-shadow:none!important; border:none!important; }
+    .topbar,.filters,.export-btn,.clear-btn,.modal-close,#detailBody button { display:none!important; }
+    body { background:#fff!important; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="topbar">
+    <div class="brand">
+      <div class="ico"><i class="fas fa-clock-rotate-left"></i></div>
+      <h1>Scan History</h1>
+    </div>
+    <div style="display:flex; gap:10px;">
+      <button class="export-btn" onclick="exportCsv()"><i class="fas fa-file-csv"></i> Export CSV</button>
+      <button class="clear-btn" onclick="clearHistory()"><i class="fas fa-trash"></i> Clear All</button>
+      <button class="theme-toggle" id="themeToggle" type="button" aria-label="Switch to dark mode"><i class="fas fa-moon"></i></button>
+      <a href="index.html" class="back"><i class="fas fa-arrow-left"></i> Dashboard</a>
+    </div>
+  </div>
+
+  <div class="filters">
+    <button class="filter-btn active" onclick="setFilter('all', this)">All</button>
+    <button class="filter-btn" onclick="setFilter('safe', this)">Safe</button>
+    <button class="filter-btn" onclick="setFilter('caution', this)">Caution</button>
+    <button class="filter-btn" onclick="setFilter('phishing', this)">Phishing</button>
+  </div>
+
+  <div class="history-panel" id="historyPanel"></div>
+</div>
+<div class="modal-backdrop" id="modal" onclick="closeDetail(event)">
+  <section class="detail-modal" role="dialog" aria-modal="true" aria-labelledby="detailTitle">
+    <div class="detail-header"><h2 id="detailTitle">Scan details</h2><button class="modal-close" onclick="closeDetail()"><i class="fas fa-xmark"></i> Close</button></div>
+    <div id="detailBody"></div>
+  </section>
+</div>
+
+<script>
+  // ---- STRICT AUTH GUARD ----
+  (function() {
+    try {
+      const c = JSON.parse(sessionStorage.getItem('ps_current') || 'null');
+      if (!c || !c.email || !c.name) {
+        sessionStorage.removeItem('ps_current');
+        window.location.replace('login.html');
+        throw new Error('unauthenticated');
+      }
+    } catch (e) {
+      window.location.replace('login.html');
+    }
+  })();
+
+  let currentFilter = 'all';
+  let allHistory = [];
+
+  function setFilter(f, btn) {
+    currentFilter = f;
+    document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    render();
+  }
+
+  async function render() {
+    const panel = document.getElementById('historyPanel');
+    try {
+      const response = await fetch('api.php?action=history', {
+        credentials: 'same-origin',
+        cache: 'no-store'
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || 'Could not load scan history.');
+      allHistory = Array.isArray(result.history) ? result.history : [];
+    } catch (err) {
+      panel.innerHTML = `<div class="empty"><h3>Could not load scan history</h3><p>${escapeHtml(err.message)}</p></div>`;
+      return;
+    }
+
+    const history = currentFilter === 'all'
+      ? allHistory
+      : allHistory.filter(h => h.status === currentFilter);
+
+    if (history.length === 0) {
+      panel.innerHTML = `
+        <div class="empty">
+          <i class="fas fa-inbox"></i>
+          <h3>No scans yet</h3>
+          <p>${currentFilter === 'all' ? 'Run a scan from the dashboard to see it here.' : 'No scans match this filter.'}</p>
+        </div>`;
+      return;
+    }
+
+    panel.innerHTML = history.map(h => {
+      const icoName = h.status === 'phishing' ? 'fa-triangle-exclamation'
+                    : h.status === 'caution' ? 'fa-exclamation'
+                    : 'fa-check';
+      const flagCount = (h.flags || []).length;
+      return `
+        <div class="history-item" role="button" tabindex="0" onclick="showDetail(${Number(h.id)})" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();showDetail(${Number(h.id)})}">
+          <div class="h-ico ${h.status}"><i class="fas ${icoName}"></i></div>
+          <div class="h-body">
+            <div class="preview">${escapeHtml(h.preview)}</div>
+            <div class="meta">
+              <span><i class="fas fa-clock"></i>${new Date(h.date.replace(' ', 'T')).toLocaleString()}</span>
+              <span><i class="fas fa-tag"></i>${escapeHtml(h.type || 'Scan')}</span>
+              <span><i class="fas fa-chart-simple"></i>Score: ${h.score}</span>
+              ${flagCount ? `<span><i class="fas fa-flag"></i>${flagCount} indicators</span>` : ''}
+            </div>
+          </div>
+          <div class="h-status ${h.status}">${h.status.toUpperCase()}</div>
+        </div>`;
+    }).join('');
+  }
+
+  function escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  }
+
+  function showDetail(id) {
+    const item = allHistory.find(entry => Number(entry.id) === Number(id));
+    if (!item) return;
+    const explanation = Array.isArray(item.explanation) ? item.explanation.slice().sort((a, b) => b.weight - a.weight) : [];
+    const indicators = explanation.length
+      ? `<ul>${explanation.map(entry => `<li><b class="indicator-weight">+${Number(entry.weight)} pts</b> ${escapeHtml(entry.detail || entry.rule || '')}</li>`).join('')}</ul>`
+      : '<p>No indicator details were saved for this scan.</p>';
+    document.getElementById('detailBody').innerHTML = `
+      <div class="detail-metrics">
+        <b>Verdict:</b> ${escapeHtml(item.status.toUpperCase())}<br>
+        <b>Risk:</b> ${Number(item.percentage)}%<br>
+        <b>Confidence:</b> ${Number(item.confidence)}%<br>
+        <b>Type:</b> ${escapeHtml(item.type)}<br>
+        <b>Time:</b> ${escapeHtml(new Date(item.date.replace(' ', 'T')).toLocaleString())}
+      </div>
+      <div class="detail-content">${escapeHtml(item.content || item.preview)}</div>
+      <h3 style="margin-top:1rem;">Indicators (Explainable AI)</h3>${indicators}
+      <div style="margin-top:1rem;display:flex;gap:8px;"><button class="export-btn" onclick="window.print()"><i class="fas fa-file-pdf"></i> Download / Print PDF</button></div>`;
+    document.getElementById('modal').classList.add('show');
+  }
+
+  function closeDetail(event) {
+    if (!event || event.target.id === 'modal' || event.target.closest('.modal-close')) {
+      document.getElementById('modal').classList.remove('show');
+    }
+  }
+
+  function exportCsv() {
+    const quote = value => `"${String(value).replace(/"/g, '""')}"`;
+    const rows = [['Type', 'Content', 'Verdict', 'Risk %', 'Confidence %', 'Time']];
+    allHistory.forEach(item => rows.push([
+      item.type,
+      String(item.content || item.preview || '').replace(/^[=+\-@]/, "'$&"),
+      item.status,
+      item.percentage,
+      item.confidence,
+      item.date
+    ]));
+    const blob = new Blob([rows.map(row => row.map(quote).join(',')).join('\r\n')], { type: 'text/csv;charset=utf-8' });
+    const link = document.createElement('a');
+    const downloadUrl = URL.createObjectURL(blob);
+    link.href = downloadUrl;
+    link.download = 'phishshield-history.csv';
+    link.click();
+    setTimeout(() => URL.revokeObjectURL(downloadUrl), 1000);
+  }
+
+  async function clearHistory() {
+    if (confirm('Delete all scan history? This cannot be undone.')) {
+      try {
+        const response = await fetch('api.php?action=clear-history', {
+          method: 'POST',
+          credentials: 'same-origin',
+          cache: 'no-store'
+        });
+        const result = await response.json();
+        if (!response.ok) throw new Error(result.error || 'Could not clear scan history.');
+        localStorage.removeItem('ps_history');
+        allHistory = [];
+      } catch (err) {
+        alert(err.message);
+        return;
+      }
+      await render();
+    }
+  }
+
+  render();
+  window.addEventListener('pageshow', event => {
+    if (event.persisted) render();
+  });
+</script>
+<script>
+  const themeToggle = document.getElementById('themeToggle');
+  function applyTheme(theme) {
+    document.documentElement.classList.toggle('dark', theme === 'dark');
+    themeToggle.innerHTML = theme === 'dark' ? '<i class="fas fa-sun"></i>' : '<i class="fas fa-moon"></i>';
+    themeToggle.setAttribute('aria-label', theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode');
+    localStorage.setItem('ps_theme', theme);
+  }
+  applyTheme(document.documentElement.classList.contains('dark') ? 'dark' : 'light');
+  themeToggle.addEventListener('click', () => applyTheme(document.documentElement.classList.contains('dark') ? 'light' : 'dark'));
+</script>
+</body>
+</html>

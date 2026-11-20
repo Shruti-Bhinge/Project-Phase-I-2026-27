@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PhishShield AI</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      width: 320px;
+      margin: 0;
+      padding: 16px;
+      background: #f3f0fa;
+      color: #242033;
+      font-family: Arial, sans-serif;
+    }
+    header {
+      margin: -16px -16px 16px;
+      padding: 16px;
+      background: linear-gradient(135deg, #34215f, #6045a5);
+      color: #fff;
+      font-size: 17px;
+      font-weight: 700;
+    }
+    button {
+      width: 100%;
+      padding: 11px 14px;
+      border: 0;
+      border-radius: 10px;
+      background: #6045a5;
+      color: #fff;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 700;
+    }
+    button:disabled { cursor: wait; opacity: .65; }
+    #out {
+      min-height: 48px;
+      margin-top: 14px;
+      padding: 12px;
+      border-radius: 10px;
+      background: #fff;
+      font-size: 13px;
+      line-height: 1.5;
+      overflow-wrap: anywhere;
+    }
+    .pill {
+      display: inline-block;
+      margin-bottom: 8px;
+      padding: 3px 9px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+    }
+    .pill.safe { background: #dff5e8; color: #17613a; }
+    .pill.caution { background: #fff0cb; color: #795509; }
+    .pill.phishing { background: #fde0e0; color: #982c2c; }
+    .error { color: #982c2c; }
+    .detail { margin-top: 6px; color: #5b5769; }
+  </style>
+</head>
+<body>
+  <header>PhishShield AI</header>
+  <button id="scanButton" type="button">Scan this page</button>
+  <div id="out" aria-live="polite">Scan the current page to check for phishing.</div>
+  <script>
+    const scanButton = document.getElementById('scanButton');
+    const output = document.getElementById('out');
+
+    scanButton.addEventListener('click', async () => {
+      scanButton.disabled = true;
+      output.textContent = 'Scanning current page...';
+      try {
+        const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+        if (!tab || typeof tab.id !== 'number') {
+          throw new Error('Could not access the current tab.');
+        }
+        const [injection] = await chrome.scripting.executeScript({
+          target: { tabId: tab.id },
+          func: () => location.href
+        });
+        const url = injection && injection.result;
+        if (typeof url !== 'string' || !url) {
+          throw new Error('Could not read the current page URL.');
+        }
+
+        const response = await fetch('http://localhost/phishshield/api.php?action=ml-predict', {
+          method: 'POST',
+          credentials: 'include',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ type: 'url', content: url, channel: 'website' })
+        });
+        const result = await response.json();
+        if (!response.ok) {
+          throw new Error(result.error || 'The page could not be scanned.');
+        }
+
+        const label = ['safe', 'caution', 'phishing'].includes(result.label) ? result.label : 'caution';
+        let confidence = Number(result.confidence ?? 0);
+        if (confidence <= 1) confidence *= 100;
+        confidence = Math.max(0, Math.min(100, Math.round(Number.isFinite(confidence) ? confidence : 0)));
+        const percentage = Number(result.percentage ?? result.score ?? 0);
+        const indicator = Array.isArray(result.indicators) && result.indicators[0]
+          ? result.indicators[0].detail || ''
+          : '';
+
+        output.replaceChildren();
+        const badge = document.createElement('span');
+        badge.className = `pill ${label}`;
+        badge.textContent = label;
+        const metrics = document.createElement('div');
+        metrics.textContent = `Risk ${Math.round(percentage)}% · Confidence ${confidence}%`;
+        output.append(badge, metrics);
+        if (indicator) {
+          const detail = document.createElement('div');
+          detail.className = 'detail';
+          detail.textContent = indicator;
+          output.appendChild(detail);
+        }
+      } catch (error) {
+        output.replaceChildren();
+        const message = document.createElement('span');
+        message.className = 'error';
+        message.textContent = error.message || 'The page could not be scanned.';
+        output.appendChild(message);
+      } finally {
+        scanButton.disabled = false;
+      }
+    });
+  </script>
+</body>
+</html>

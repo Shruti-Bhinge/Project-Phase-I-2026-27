@@ -1,0 +1,653 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PhishShield AI · Live Scanner</title>
+  <script>
+    try {
+      const current = JSON.parse(sessionStorage.getItem('ps_current') || 'null');
+      if (!current || !current.email || !current.name) window.location.replace('login.html');
+    } catch (err) {
+      window.location.replace('login.html');
+    }
+  </script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" />
+  <script>
+    try {
+      if (localStorage.getItem('ps_theme') === 'dark') document.documentElement.classList.add('dark');
+    } catch (err) {
+      console.error('Could not load saved theme:', err);
+    }
+  </script>
+  <style>
+    :root {
+      --bg: #eef4f9;
+      --card: #fff;
+      --text: #102b40;
+      --sub: #617b90;
+      --line: #dce7ef;
+    }
+    html.dark {
+      --bg: #0c1925;
+      --card: #172838;
+      --text: #e8f1f8;
+      --sub: #9ab0c2;
+      --line: #2a4052;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      padding: 1.5rem;
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Segoe UI', Roboto, sans-serif;
+    }
+    button, input, textarea { font: inherit; }
+    .wrap { max-width: 1280px; margin: 0 auto; }
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      margin-bottom: 1.25rem;
+      padding: 1rem 1.35rem;
+      border: 1px solid var(--line);
+      border-radius: 22px;
+      background: var(--card);
+      box-shadow: 0 8px 26px rgba(17, 47, 70, .07);
+    }
+    .brand { display: flex; align-items: center; gap: .85rem; }
+    .brand-icon {
+      display: grid;
+      width: 44px;
+      height: 44px;
+      place-items: center;
+      border-radius: 14px;
+      background: linear-gradient(135deg, #0b2b4b, #2879a5);
+      color: #fff;
+      font-size: 1.2rem;
+    }
+    h1 { margin: 0; font-size: 1.3rem; }
+    .back {
+      display: inline-flex;
+      align-items: center;
+      gap: .5rem;
+      padding: .65rem 1rem;
+      border-radius: 12px;
+      background: #e7f1f9;
+      color: #123b57;
+      font-size: .9rem;
+      font-weight: 700;
+      text-decoration: none;
+    }
+    html.dark .back { background: #253e52; color: #e8f1f8; }
+    .card {
+      min-width: 0;
+      padding: 1.4rem;
+      border: 1px solid var(--line);
+      border-radius: 22px;
+      background: var(--card);
+      box-shadow: 0 10px 30px rgba(17, 47, 70, .07);
+    }
+    .section-heading {
+      display: flex;
+      align-items: flex-start;
+      gap: .75rem;
+      margin-bottom: 1rem;
+    }
+    .section-heading i { margin-top: .2rem; color: #3181b1; }
+    h2 { margin: 0; font-size: 1.08rem; }
+    .hint { margin: .35rem 0 0; color: var(--sub); font-size: .88rem; line-height: 1.5; }
+    .url-bar {
+      display: flex;
+      align-items: center;
+      gap: .8rem;
+      min-height: 68px;
+      padding: .75rem 1rem;
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      background: var(--bg);
+    }
+    .lock-icon { color: #4f7892; font-size: 1.05rem; }
+    #urlInput {
+      width: 100%;
+      min-width: 0;
+      border: 0;
+      outline: 0;
+      background: transparent;
+      color: var(--text);
+      font-size: 1rem;
+    }
+    #urlInput::placeholder, textarea::placeholder { color: var(--sub); opacity: .8; }
+    .light {
+      flex: 0 0 18px;
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: #9aa8b2;
+    }
+    .light.ok { background: #24b36b; box-shadow: 0 0 12px rgba(36, 179, 107, .7); }
+    .light.warn { background: #e6a51a; box-shadow: 0 0 12px rgba(230, 165, 26, .7); }
+    .light.bad { background: #e04b4b; box-shadow: 0 0 12px rgba(224, 75, 75, .7); }
+    .verdict {
+      display: none;
+      margin-top: 1rem;
+      padding: 1rem;
+      border: 1px solid var(--line);
+      border-radius: 15px;
+      line-height: 1.55;
+    }
+    .verdict.show { display: block; }
+    .verdict.ok { border-color: #9ad9b7; background: rgba(36, 179, 107, .09); }
+    .verdict.warn { border-color: #ecd28c; background: rgba(230, 165, 26, .1); }
+    .verdict.bad { border-color: #edaaaa; background: rgba(224, 75, 75, .1); }
+    .verdict-title { font-weight: 800; }
+    .verdict-detail { margin-top: .35rem; color: var(--sub); font-size: .9rem; }
+    .preview { display: none; margin-top: 1rem; }
+    .preview.show { display: block; }
+    .preview img {
+      display: block;
+      width: min(700px, 100%);
+      max-height: 500px;
+      object-fit: cover;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      background: var(--bg);
+    }
+    .grid2 {
+      display: grid;
+      grid-template-columns: minmax(0, 1.7fr) minmax(280px, 1fr);
+      gap: 1.15rem;
+      margin-top: 1.15rem;
+      align-items: start;
+    }
+    textarea {
+      display: block;
+      width: 100%;
+      min-height: 160px;
+      resize: vertical;
+      padding: .9rem;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      outline: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: Consolas, 'Courier New', monospace;
+      font-size: .9rem;
+      line-height: 1.5;
+    }
+    textarea:focus, #urlInput:focus { border-color: #3988b7; }
+    .actions { display: flex; flex-wrap: wrap; gap: .65rem; margin-top: .8rem; }
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: .5rem;
+      padding: .7rem 1rem;
+      border: 0;
+      border-radius: 12px;
+      background: #0f4265;
+      color: #fff;
+      cursor: pointer;
+      font-weight: 700;
+    }
+    .btn.secondary { background: #e7f1f9; color: #123b57; }
+    html.dark .btn.secondary { background: #253e52; color: #e8f1f8; }
+    .btn:disabled { cursor: wait; opacity: .65; }
+    .status { min-height: 1.4em; margin: .7rem 0 0; color: var(--sub); font-size: .88rem; }
+    .status.error { color: #cc4545; }
+    .table-wrap { overflow-x: auto; margin-top: 1rem; }
+    table { width: 100%; border-collapse: collapse; text-align: left; }
+    th, td { padding: .75rem .6rem; border-bottom: 1px solid var(--line); vertical-align: top; }
+    th { color: var(--sub); font-size: .78rem; letter-spacing: .04em; text-transform: uppercase; }
+    td { font-size: .88rem; overflow-wrap: anywhere; }
+    .pill {
+      display: inline-block;
+      padding: .25rem .6rem;
+      border-radius: 999px;
+      font-size: .76rem;
+      font-weight: 800;
+      text-transform: capitalize;
+      white-space: nowrap;
+    }
+    .pill.safe { background: #dff5e8; color: #17613a; }
+    .pill.caution { background: #fff0cb; color: #795509; }
+    .pill.phishing, .pill.error { background: #fde0e0; color: #982c2c; }
+    html.dark .pill.safe { background: #1d4935; color: #a7ebc2; }
+    html.dark .pill.caution { background: #59451d; color: #ffe09a; }
+    html.dark .pill.phishing, html.dark .pill.error { background: #592e32; color: #ffc0c0; }
+    .feed {
+      display: grid;
+      gap: .65rem;
+      max-height: 430px;
+      min-height: 120px;
+      overflow-y: auto;
+      padding-right: .25rem;
+    }
+    .feed-card {
+      padding: .8rem .85rem;
+      border-left: 4px solid #d84a4a;
+      border-radius: 10px;
+      background: var(--bg);
+      overflow-wrap: anywhere;
+    }
+    .feed-domain { font-weight: 800; }
+    .feed-reason { margin-top: .25rem; color: var(--sub); font-size: .86rem; }
+    .feed-meta { margin-top: .45rem; color: #d84a4a; font-size: .8rem; font-weight: 700; }
+    .feed-empty { color: var(--sub); font-size: .9rem; }
+    @media (max-width: 800px) {
+      body { padding: 1rem; }
+      .grid2 { grid-template-columns: 1fr; }
+    }
+    @media (max-width: 480px) {
+      .topbar { padding: .85rem; }
+      .card { padding: 1rem; }
+      h1 { font-size: 1.1rem; }
+      .url-bar { gap: .55rem; padding: .7rem; }
+    }
+  </style>
+</head>
+<body>
+  <main class="wrap">
+    <header class="topbar">
+      <div class="brand">
+        <div class="brand-icon" aria-hidden="true"><i class="fas fa-shield-alt"></i></div>
+        <h1>Live Scanner</h1>
+      </div>
+      <a class="back" href="index.html"><i class="fas fa-arrow-left"></i> Dashboard</a>
+    </header>
+
+    <section class="card" aria-labelledby="realtimeHeading">
+      <div class="section-heading">
+        <i class="fas fa-globe" aria-hidden="true"></i>
+        <div>
+          <h2 id="realtimeHeading">Real-time Scan</h2>
+          <p class="hint">Enter a website URL, email, or message. Scanning starts automatically after you stop typing.</p>
+        </div>
+      </div>
+      <div class="url-bar">
+        <i class="fas fa-lock lock-icon" aria-hidden="true"></i>
+        <input id="urlInput" type="text" autocomplete="off" placeholder="Enter a URL, email, or message to scan..." aria-label="URL, email, or message to scan" />
+        <span id="trafficLight" class="light" aria-label="Not scanned"></span>
+      </div>
+      <div id="verdict" class="verdict" role="status" aria-live="polite"></div>
+      <div id="screenshotPreview" class="preview"></div>
+      <p id="liveStatus" class="status" aria-live="polite"></p>
+    </section>
+
+    <div class="grid2">
+      <section class="card" aria-labelledby="bulkHeading">
+        <div class="section-heading">
+          <i class="fas fa-layer-group" aria-hidden="true"></i>
+          <div>
+            <h2 id="bulkHeading">Bulk Scan</h2>
+            <p class="hint">Enter up to 50 URLs or messages, one per line.</p>
+          </div>
+        </div>
+        <textarea id="bulkInput" aria-label="Lines to scan" placeholder="https://example.com&#10;A message to check..."></textarea>
+        <div class="actions">
+          <button id="scanAllButton" class="btn" type="button"><i class="fas fa-search"></i> Scan All</button>
+          <button id="exportButton" class="btn secondary" type="button" disabled><i class="fas fa-download"></i> Export</button>
+        </div>
+        <p id="bulkStatus" class="status" aria-live="polite"></p>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr><th>Input</th><th>Verdict</th><th>Risk</th><th>Top indicator</th></tr>
+            </thead>
+            <tbody id="bulkResults">
+              <tr><td class="feed-empty" colspan="4">Bulk scan results will appear here.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="card" aria-labelledby="feedHeading">
+        <div class="section-heading">
+          <i class="fas fa-bolt" aria-hidden="true"></i>
+          <div>
+            <h2 id="feedHeading">Live Threat Feed</h2>
+            <p class="hint">Newly detected phishing hosts, refreshed every 8 seconds.</p>
+          </div>
+        </div>
+        <div id="threatFeed" class="feed" aria-live="polite">
+          <p class="feed-empty">Waiting for threat events...</p>
+        </div>
+        <p id="feedStatus" class="status" aria-live="polite"></p>
+      </section>
+    </div>
+  </main>
+
+  <script>
+    function escapeHtml(value) {
+      return String(value).replace(/[&<>"']/g, character => ({
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#39;'
+      })[character]);
+    }
+
+    async function postJson(action, body) {
+      const response = await fetch(`api.php?action=${encodeURIComponent(action)}`, {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      });
+      const payload = await response.json();
+      if (response.status === 401) {
+        window.location.replace('login.html');
+        throw new Error('Please log in again.');
+      }
+      if (!response.ok) throw new Error(payload.error || 'The request could not be completed.');
+      return payload;
+    }
+
+    function isUrlLike(value) {
+      const input = value.trim();
+      if (!input || /\s/.test(input)) return false;
+      const candidate = /^[a-z][a-z0-9+.-]*:\/\//i.test(input) ? input : `http://${input}`;
+      try {
+        const parsed = new URL(candidate);
+        const host = parsed.hostname.replace(/^\[|\]$/g, '');
+        return (parsed.protocol === 'http:' || parsed.protocol === 'https:')
+          && (host === 'localhost' || host.includes('.') || /^\d{1,3}(?:\.\d{1,3}){3}$/.test(host) || host.includes(':'));
+      } catch (err) {
+        return false;
+      }
+    }
+
+    function liveScanType(value) {
+      if (isUrlLike(value)) return 'website';
+      if (/^\s*(?:(?:from|to|cc|bcc|date|subject|reply-to)\s*:)/im.test(value)) return 'email';
+      return 'message';
+    }
+
+    function urlHost(value) {
+      const input = String(value || '').trim();
+      if (!input) return '';
+      const candidate = /^[a-z][a-z0-9+.-]*:\/\//i.test(input) ? input : `http://${input}`;
+      try {
+        return new URL(candidate).hostname.toLowerCase();
+      } catch (err) {
+        return '';
+      }
+    }
+
+    function verdictTone(label) {
+      if (label === 'phishing') return 'bad';
+      if (label === 'caution') return 'warn';
+      return 'ok';
+    }
+
+    function riskPercent(result) {
+      const risk = Number(result.percentage ?? result.score ?? Number(result.phishing_probability) * 100);
+      return Math.max(0, Math.min(100, Number.isFinite(risk) ? Math.round(risk) : 0));
+    }
+
+    function confidencePercent(result) {
+      let confidence = Number(result.confidence ?? 0);
+      if (confidence <= 1) confidence *= 100;
+      return Math.max(0, Math.min(100, Math.round(Number.isFinite(confidence) ? confidence : 0)));
+    }
+
+    const urlInput = document.getElementById('urlInput');
+    const trafficLight = document.getElementById('trafficLight');
+    const verdictBox = document.getElementById('verdict');
+    const screenshotPreview = document.getElementById('screenshotPreview');
+    const liveStatus = document.getElementById('liveStatus');
+    let liveTimer = null;
+    let liveController = null;
+    let liveRequestId = 0;
+
+    function resetLiveResult() {
+      trafficLight.className = 'light';
+      trafficLight.setAttribute('aria-label', 'Not scanned');
+      verdictBox.className = 'verdict';
+      verdictBox.textContent = '';
+      screenshotPreview.className = 'preview';
+      screenshotPreview.textContent = '';
+      liveStatus.className = 'status';
+      liveStatus.textContent = '';
+    }
+
+    async function runLiveScan(value, requestId) {
+      if (liveController) liveController.abort();
+      liveController = new AbortController();
+      const scanType = liveScanType(value);
+      const looksLikeUrl = scanType === 'website';
+      liveStatus.className = 'status';
+      liveStatus.textContent = 'Scanning...';
+      try {
+        const response = await fetch('api.php?action=ml-predict', {
+          method: 'POST',
+          credentials: 'same-origin',
+          headers: { 'Content-Type': 'application/json' },
+          signal: liveController.signal,
+          body: JSON.stringify({
+            type: looksLikeUrl ? 'url' : 'text',
+            content: value,
+            channel: scanType
+          })
+        });
+        const result = await response.json();
+        if (response.status === 401) {
+          window.location.replace('login.html');
+          throw new Error('Please log in again.');
+        }
+        if (!response.ok) throw new Error(result.error || 'The scan could not be completed.');
+        if (requestId !== liveRequestId) return;
+
+        const label = ['safe', 'caution', 'phishing'].includes(result.label) ? result.label : 'caution';
+        const tone = verdictTone(label);
+        const risk = riskPercent(result);
+        const confidence = confidencePercent(result);
+        const indicators = Array.isArray(result.indicators) ? result.indicators : [];
+        const detail = indicators.length && indicators[0].detail ? indicators[0].detail : 'No additional indicator details.';
+        trafficLight.className = `light ${tone}`;
+        trafficLight.setAttribute('aria-label', `${label} verdict`);
+        verdictBox.className = `verdict show ${tone}`;
+        verdictBox.innerHTML = `<div class="verdict-title">${escapeHtml(label.toUpperCase())} — Risk ${risk}% · Confidence ${confidence}%</div><div class="verdict-detail">${escapeHtml(detail)}</div>`;
+        window.__psLastScan = {
+          label: result.label,
+          percentage: result.percentage,
+          indicators: result.indicators || []
+        };
+        liveStatus.className = 'status';
+        liveStatus.textContent = 'Scan complete.';
+
+        if (label === 'phishing' && looksLikeUrl) {
+          const screenshotUrl = `https://image.thum.io/get/width=700/crop/500/${encodeURIComponent(value)}`;
+          screenshotPreview.className = 'preview show';
+          screenshotPreview.innerHTML = `<img src="${escapeHtml(screenshotUrl)}" alt="Screenshot preview of the scanned website" loading="lazy">`;
+        } else {
+          screenshotPreview.className = 'preview';
+          screenshotPreview.textContent = '';
+        }
+
+        try {
+          await postJson('scan', {
+            type: scanType,
+            content: value,
+            status: label,
+            score: risk,
+            percentage: risk,
+            confidence,
+            flags: indicators,
+            urls: Array.isArray(result.urls) ? result.urls : [],
+            explanation: indicators
+          });
+          liveStatus.textContent = 'Scan complete and saved to history.';
+        } catch (err) {
+          liveStatus.className = 'status error';
+          liveStatus.textContent = `Scan complete, but history could not be saved: ${err.message}`;
+        }
+
+        const host = urlHost(value) || (Array.isArray(result.urls) ? result.urls.map(urlHost).find(Boolean) : '') || '';
+        try {
+          fetch('api.php?action=record-analytics', {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              scan_type: 'website',
+              host,
+              verdict: result.label,
+              score: result.percentage
+            })
+          }).catch(() => {});
+        } catch (err) {}
+      } catch (err) {
+        if (err.name === 'AbortError' || requestId !== liveRequestId) return;
+        trafficLight.className = 'light';
+        trafficLight.setAttribute('aria-label', 'Scan error');
+        verdictBox.className = 'verdict show bad';
+        verdictBox.textContent = err.message || 'The scan could not be completed.';
+        screenshotPreview.className = 'preview';
+        screenshotPreview.textContent = '';
+        liveStatus.className = 'status error';
+        liveStatus.textContent = 'Check the input or try again.';
+      }
+    }
+
+    urlInput.addEventListener('input', () => {
+      clearTimeout(liveTimer);
+      const value = urlInput.value.trim();
+      const requestId = ++liveRequestId;
+      if (liveController) liveController.abort();
+      const realtimeHeading = document.getElementById('realtimeHeading');
+      realtimeHeading.textContent = value
+        ? `Real-time ${liveScanType(value) === 'website' ? 'URL' : liveScanType(value) === 'email' ? 'Email' : 'Message'} Scan`
+        : 'Real-time Scan';
+      if (!value) {
+        resetLiveResult();
+        return;
+      }
+      liveTimer = setTimeout(() => runLiveScan(value, requestId), 600);
+    });
+
+    const bulkInput = document.getElementById('bulkInput');
+    const scanAllButton = document.getElementById('scanAllButton');
+    const exportButton = document.getElementById('exportButton');
+    const bulkResults = document.getElementById('bulkResults');
+    const bulkStatus = document.getElementById('bulkStatus');
+    let lastBulkResults = [];
+
+    function renderBulkResults(results) {
+      if (!results.length) {
+        bulkResults.innerHTML = '<tr><td class="feed-empty" colspan="4">No non-empty lines were scanned.</td></tr>';
+        return;
+      }
+      bulkResults.innerHTML = results.map(item => {
+        if (item.error) {
+          return `<tr><td>${escapeHtml(item.input || '')}</td><td><span class="pill error">Error</span></td><td>—</td><td>${escapeHtml(item.error)}</td></tr>`;
+        }
+        const label = ['safe', 'caution', 'phishing'].includes(item.label) ? item.label : 'caution';
+        return `<tr><td>${escapeHtml(item.input)}</td><td><span class="pill ${label}">${escapeHtml(label)}</span></td><td>${escapeHtml(item.score)}%</td><td>${escapeHtml(item.top || '—')}</td></tr>`;
+      }).join('');
+    }
+
+    scanAllButton.addEventListener('click', async () => {
+      const lines = bulkInput.value.split(/\r?\n/).map(line => line.trim()).filter(Boolean);
+      if (!lines.length) {
+        bulkStatus.className = 'status error';
+        bulkStatus.textContent = 'Enter at least one line to scan.';
+        return;
+      }
+      if (lines.length > 50) {
+        bulkStatus.className = 'status error';
+        bulkStatus.textContent = 'Bulk scans are limited to 50 non-empty lines.';
+        return;
+      }
+      scanAllButton.disabled = true;
+      bulkStatus.className = 'status';
+      bulkStatus.textContent = 'Scanning lines...';
+      try {
+        const payload = await postJson('bulk-scan', { lines });
+        lastBulkResults = Array.isArray(payload.results) ? payload.results : [];
+        renderBulkResults(lastBulkResults);
+        exportButton.disabled = lastBulkResults.length === 0;
+        bulkStatus.textContent = `Scan complete: ${lastBulkResults.length} result${lastBulkResults.length === 1 ? '' : 's'}.`;
+      } catch (err) {
+        bulkStatus.className = 'status error';
+        bulkStatus.textContent = err.message || 'Bulk scan could not be completed.';
+      } finally {
+        scanAllButton.disabled = false;
+      }
+    });
+
+    function csvField(value) {
+      return `"${String(value ?? '').replace(/"/g, '""')}"`;
+    }
+
+    exportButton.addEventListener('click', () => {
+      if (!lastBulkResults.length) return;
+      const rows = [
+        ['Input', 'Verdict', 'Risk', 'Confidence', 'Top indicator', 'Error'],
+        ...lastBulkResults.map(item => [
+          item.input || '',
+          item.label || (item.error ? 'Error' : ''),
+          item.score ?? '',
+          item.confidence ?? '',
+          item.top || '',
+          item.error || ''
+        ])
+      ];
+      const csv = rows.map(row => row.map(csvField).join(',')).join('\r\n');
+      const blob = new Blob([`\uFEFF${csv}`], { type: 'text/csv;charset=utf-8' });
+      const downloadUrl = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = downloadUrl;
+      link.download = 'phishshield-bulk-scan.csv';
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(downloadUrl);
+    });
+
+    const threatFeed = document.getElementById('threatFeed');
+    const feedStatus = document.getElementById('feedStatus');
+    let lastThreatId = 0;
+    let hasThreatEvents = false;
+
+    async function pollThreatFeed() {
+      try {
+        const response = await fetch(`api.php?action=threat-feed&since=${encodeURIComponent(lastThreatId)}`, {
+          credentials: 'same-origin',
+          cache: 'no-store'
+        });
+        const payload = await response.json();
+        if (response.status === 401) {
+          window.location.replace('login.html');
+          throw new Error('Please log in again.');
+        }
+        if (!response.ok) throw new Error(payload.error || 'Threat feed could not be loaded.');
+        const events = Array.isArray(payload.events) ? payload.events : [];
+        events.forEach(event => {
+          const eventId = Number(event.id) || 0;
+          lastThreatId = Math.max(lastThreatId, eventId);
+          const card = document.createElement('article');
+          card.className = 'feed-card';
+          card.innerHTML = `<div class="feed-domain">${escapeHtml(event.domain || '')}</div><div class="feed-reason">${escapeHtml(event.reason || '')}</div><div class="feed-meta">Risk score: ${escapeHtml(event.score ?? '')} · ${escapeHtml(event.created_at || '')}</div>`;
+          if (!hasThreatEvents) {
+            threatFeed.textContent = '';
+            hasThreatEvents = true;
+          }
+          threatFeed.prepend(card);
+        });
+        feedStatus.className = 'status';
+        feedStatus.textContent = '';
+      } catch (err) {
+        feedStatus.className = 'status error';
+        feedStatus.textContent = err.message || 'Threat feed could not be loaded.';
+      }
+    }
+
+    pollThreatFeed();
+    setInterval(pollThreatFeed, 8000);
+  </script>
+</body>
+</html>

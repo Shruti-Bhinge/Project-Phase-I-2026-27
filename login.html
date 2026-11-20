@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<script>
+  if (location.port === '5500') {
+    location.replace('http://localhost/phishshield/login.html' + location.search + location.hash);
+  }
+</script>
+<title>PhishShield AI · Login</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" />
+<script>
+  try {
+    if (localStorage.getItem('ps_theme') === 'dark') document.documentElement.classList.add('dark');
+  } catch (err) {
+    console.error('Could not load saved theme:', err);
+  }
+</script>
+<style>
+  :root { --bg-grad: linear-gradient(145deg,#eef5fb,#e2ebf3); --card-bg: rgba(255,255,255,.8); --text: #0a1e2f; --subtext: #5a7a94; }
+  html.dark { --bg-grad: linear-gradient(145deg,#0a1622,#0f2233); --card-bg: rgba(20,35,50,.7); --text: #e6f0f9; --subtext: #8fa8bd; }
+  * { margin:0; padding:0; box-sizing:border-box; font-family:'Segoe UI', Roboto, sans-serif; }
+  body {
+    min-height:100vh;
+    background: var(--bg-grad);
+    display:flex; flex-direction:column; align-items:center; justify-content:flex-start; padding:2rem;
+    overflow-x:hidden; overflow-y:auto; position:relative;
+  }
+  body::before, body::after {
+    content:""; position:absolute; border-radius:50%; filter:blur(80px); opacity:0.35;
+  }
+  body::before { width:400px; height:400px; background:#3d9ad6; top:-100px; left:-100px; animation: float1 12s ease-in-out infinite; }
+  body::after { width:500px; height:500px; background:#1b6d4a; bottom:-150px; right:-150px; animation: float2 15s ease-in-out infinite; }
+  @keyframes float1 { 0%,100%{ transform:translate(0,0);} 50%{ transform:translate(60px,80px);} }
+  @keyframes float2 { 0%,100%{ transform:translate(0,0);} 50%{ transform:translate(-70px,-50px);} }
+
+  .auth-wrap {
+    position:relative; z-index:2;
+    width:100%; max-width:960px;
+    margin:auto 0;
+    display:grid; grid-template-columns:1fr 1fr;
+    background: rgba(255,255,255,0.08);
+    backdrop-filter: blur(20px);
+    border-radius:36px;
+    border:1px solid rgba(255,255,255,0.15);
+    box-shadow: 0 30px 80px rgba(0,0,0,0.4);
+    overflow:hidden;
+  }
+  #themeToggle {
+    position:fixed; top:1rem; right:1rem; z-index:10; width:42px; height:42px;
+    border:1px solid rgba(255,255,255,0.4); border-radius:12px; background:var(--card-bg);
+    color:var(--text); cursor:pointer; font-size:1rem;
+  }
+  @media (max-width: 780px) {
+    .auth-wrap { grid-template-columns: 1fr; }
+    .brand-side { display:none; }
+  }
+
+  .brand-side {
+    padding:3rem 2.5rem;
+    background: linear-gradient(150deg, rgba(61,154,214,0.25), rgba(27,109,74,0.15));
+    color:#fff; display:flex; flex-direction:column; justify-content:center;
+    border-right:1px solid rgba(255,255,255,0.1);
+  }
+  .brand-logo { display:flex; align-items:center; gap:14px; margin-bottom:2rem; }
+  .brand-logo .ico {
+    width:56px; height:56px; border-radius:18px;
+    background: linear-gradient(135deg, #3d9ad6, #1b6d4a);
+    display:flex; align-items:center; justify-content:center; font-size:28px;
+    box-shadow:0 8px 20px rgba(0,0,0,0.3);
+  }
+  .brand-logo h1 { font-size:1.8rem; letter-spacing:-0.5px; }
+  .brand-logo h1 span { font-weight:300; opacity:0.75; font-size:1rem; display:block; }
+  .brand-side h2 { font-size:1.6rem; font-weight:600; margin-bottom:1rem; line-height:1.3; }
+  .brand-side p { opacity:0.75; line-height:1.6; margin-bottom:2rem; font-size:0.95rem; }
+  .brand-features { list-style:none; display:flex; flex-direction:column; gap:14px; }
+  .brand-features li { display:flex; align-items:center; gap:12px; font-size:0.95rem; opacity:0.9; }
+  .brand-features li i { color:#7fd6a8; font-size:1.1rem; }
+
+  .form-side {
+    padding:3rem 2.5rem;
+    background: rgba(255,255,255,0.97);
+    display:flex; flex-direction:column; justify-content:center;
+  }
+  html.dark .form-side { background:var(--card-bg); }
+  .tabs {
+    display:flex; gap:8px; margin-bottom:2rem; background:#eef4f9; padding:6px; border-radius:60px;
+  }
+  .tab {
+    flex:1; padding:0.7rem; border:none; border-radius:60px; background:transparent;
+    font-weight:600; font-size:0.95rem; cursor:pointer; color:#4a6d85; transition:0.2s;
+  }
+  .tab.active { background:#0b2b4b; color:#fff; box-shadow:0 6px 16px rgba(11,43,75,0.25); }
+
+  .field { margin-bottom:1.2rem; }
+  .field label { display:block; font-size:0.85rem; font-weight:600; color:#1a3346; margin-bottom:6px; }
+  .field .inp {
+    display:flex; align-items:center; gap:10px;
+    background:#f4f8fc; border:1.5px solid #dde9f2; border-radius:14px; padding:0.75rem 1rem;
+    transition:0.15s;
+  }
+  .field .inp:focus-within { border-color:#3d9ad6; background:#fff; box-shadow:0 0 0 4px rgba(61,154,214,0.12); }
+  .field .inp i { color:#7a94a8; font-size:1rem; }
+  .field .inp input {
+    flex:1; border:none; outline:none; background:transparent; font-size:0.95rem; color:#1a3346; font-family:inherit;
+  }
+  .password-toggle {
+    border:0; padding:0.25rem; background:transparent; color:#7a94a8; cursor:pointer;
+    display:flex; align-items:center; justify-content:center; font-size:1rem;
+  }
+  .password-toggle:hover { color:#1a4b6d; }
+  .password-toggle:focus-visible { outline:2px solid #3d9ad6; outline-offset:2px; border-radius:4px; }
+
+  .btn-submit {
+    width:100%; padding:0.95rem; border:none; border-radius:14px;
+    background: linear-gradient(135deg, #0b2b4b, #1a4b6d);
+    color:#fff; font-weight:700; font-size:1rem; cursor:pointer;
+    display:flex; align-items:center; justify-content:center; gap:10px;
+    transition:0.2s; margin-top:0.5rem; box-shadow:0 10px 24px rgba(11,43,75,0.28);
+  }
+  .btn-submit:hover { transform:translateY(-2px); box-shadow:0 14px 32px rgba(11,43,75,0.35); }
+
+  .msg {
+    padding:0.7rem 1rem; border-radius:12px; font-size:0.85rem; margin-bottom:1rem; display:none;
+  }
+  .msg.error { background:#fde8e8; color:#b13e3e; display:block; }
+  .msg.success { background:#d9f2e3; color:#0f5132; display:block; }
+
+  .hint { text-align:center; font-size:0.8rem; color:#6a8399; margin-top:1.2rem; }
+  .hint a { color:#1a4b6d; font-weight:600; text-decoration:none; cursor:pointer; }
+  .brand-side h2, .brand-side p, .brand-features { color:#fff; }
+  .form-side h2, .form-side label { color:var(--text); }
+</style>
+</head>
+<body>
+<button id="themeToggle" type="button" aria-label="Switch to dark mode"><i class="fas fa-moon"></i></button>
+
+<div class="auth-wrap">
+  <div class="brand-side">
+    <div class="brand-logo">
+      <div class="ico"><i class="fas fa-shield-halved"></i></div>
+      <h1>PhishShield <span>AI-powered protection</span></h1>
+    </div>
+    <h2>Real-time phishing detection, zero compromise.</h2>
+    <p>Detect phishing emails, websites, and messages instantly with on-device AI — no data ever leaves your device.</p>
+    <ul class="brand-features">
+      <li><i class="fas fa-check-circle"></i> Real-time AI analysis</li>
+      <li><i class="fas fa-check-circle"></i> Zero data storage policy</li>
+      <li><i class="fas fa-check-circle"></i> Under 0.2% false positives</li>
+    </ul>
+  </div>
+
+  <div class="form-side">
+    <div class="tabs">
+      <button class="tab active" id="tabLogin" onclick="switchTab('login')">Login</button>
+      <button class="tab" id="tabSignup" onclick="switchTab('signup')">Sign Up</button>
+    </div>
+
+    <div id="alertBox" class="msg"></div>
+
+    <form id="loginForm" autocomplete="off" novalidate onsubmit="handleLogin(event)">
+      <div class="field">
+        <label>Email address</label>
+        <div class="inp"><i class="fas fa-envelope"></i><input type="email" id="loginEmail" placeholder="you@example.com" maxlength="254" autocomplete="off" readonly required /></div>
+      </div>
+      <div class="field">
+        <label>Password</label>
+        <div class="inp"><i class="fas fa-lock"></i><input type="password" id="loginPass" placeholder="Enter password" maxlength="64" autocomplete="new-password" readonly required /><button type="button" class="password-toggle" aria-label="Show password" aria-pressed="false" onclick="togglePasswordVisibility('loginPass', this)"><i class="fas fa-eye" aria-hidden="true"></i></button></div>
+      </div>
+      <button type="submit" class="btn-submit"><i class="fas fa-right-to-bracket"></i> Login securely</button>
+      <p class="hint">New here? <a onclick="switchTab('signup')">Create an account</a></p>
+    </form>
+
+    <form id="signupForm" autocomplete="off" novalidate style="display:none;" onsubmit="handleSignup(event)">
+      <div class="field">
+        <label>Full name</label>
+        <div class="inp"><i class="fas fa-user"></i><input type="text" id="suName" placeholder="Your full name" minlength="2" maxlength="60" autocomplete="off" readonly required /></div>
+      </div>
+      <div class="field">
+        <label>Email address</label>
+        <div class="inp"><i class="fas fa-envelope"></i><input type="email" id="suEmail" placeholder="you@example.com" maxlength="254" autocomplete="off" readonly required /></div>
+      </div>
+      <div class="field">
+        <label>Password</label>
+        <div class="inp"><i class="fas fa-lock"></i><input type="password" id="suPass" placeholder="8+ characters, mixed case, a number and a symbol" minlength="8" maxlength="64" autocomplete="new-password" readonly required /><button type="button" class="password-toggle" aria-label="Show password" aria-pressed="false" onclick="togglePasswordVisibility('suPass', this)"><i class="fas fa-eye" aria-hidden="true"></i></button></div>
+      </div>
+      <div class="field">
+        <label>Confirm password</label>
+        <div class="inp"><i class="fas fa-lock"></i><input type="password" id="suPassConfirm" placeholder="Re-enter your password" minlength="8" maxlength="64" autocomplete="new-password" readonly required /><button type="button" class="password-toggle" aria-label="Show password" aria-pressed="false" onclick="togglePasswordVisibility('suPassConfirm', this)"><i class="fas fa-eye" aria-hidden="true"></i></button></div>
+      </div>
+      <button type="submit" class="btn-submit"><i class="fas fa-user-plus"></i> Create account</button>
+      <p class="hint">Already registered? <a onclick="switchTab('login')">Login here</a></p>
+    </form>
+  </div>
+</div>
+
+<script>
+  const themeToggle = document.getElementById('themeToggle');
+  function applyTheme(theme) {
+    document.documentElement.classList.toggle('dark', theme === 'dark');
+    themeToggle.innerHTML = theme === 'dark' ? '<i class="fas fa-sun"></i>' : '<i class="fas fa-moon"></i>';
+    themeToggle.setAttribute('aria-label', theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode');
+    localStorage.setItem('ps_theme', theme);
+  }
+  applyTheme(document.documentElement.classList.contains('dark') ? 'dark' : 'light');
+  themeToggle.addEventListener('click', () => applyTheme(document.documentElement.classList.contains('dark') ? 'light' : 'dark'));
+
+  function switchTab(which) {
+    document.getElementById('tabLogin').classList.toggle('active', which === 'login');
+    document.getElementById('tabSignup').classList.toggle('active', which === 'signup');
+    document.getElementById('loginForm').style.display = which === 'login' ? 'block' : 'none';
+    document.getElementById('signupForm').style.display = which === 'signup' ? 'block' : 'none';
+    hideAlert();
+  }
+
+  function showAlert(type, text) {
+    const box = document.getElementById('alertBox');
+    box.className = 'msg ' + type;
+    box.textContent = text;
+  }
+  function hideAlert() {
+    document.getElementById('alertBox').className = 'msg';
+  }
+
+  function togglePasswordVisibility(inputId, button) {
+    const input = document.getElementById(inputId);
+    const showingPassword = input.type === 'password';
+    input.type = showingPassword ? 'text' : 'password';
+    button.setAttribute('aria-label', showingPassword ? 'Hide password' : 'Show password');
+    button.setAttribute('aria-pressed', String(showingPassword));
+    button.querySelector('i').className = showingPassword ? 'fas fa-eye-slash' : 'fas fa-eye';
+  }
+
+  function emailValidationMessage(email, rejectDisposable) {
+    const normalizedEmail = email.trim().toLowerCase();
+    const parts = normalizedEmail.split('@');
+    if (normalizedEmail.length > 254 || parts.length !== 2) return 'Enter a valid email address.';
+
+    const [local, domain] = parts;
+    const labels = domain.split('.');
+    if (local.length > 64 || !/^[A-Za-z0-9._%+-]+$/.test(local) || local.startsWith('.') || local.endsWith('.') || local.includes('..')
+      || domain.length > 253 || labels.length < 2 || labels.some(label => !/^[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?$/.test(label))
+      || !/^[A-Za-z]{2,}$/.test(labels[labels.length - 1])) {
+      return 'Enter a valid email address and domain (e.g. name@example.com).';
+    }
+    if (rejectDisposable && /(.)\1{4,}/.test(local)) return 'Email address looks invalid (too many repeated characters).';
+    if (rejectDisposable && ['mailinator.com', 'tempmail.com', '10minutemail.com', 'guerrillamail.com', 'throwawaymail.com', 'yopmail.com', 'trashmail.com'].some(blockedDomain => domain.endsWith(blockedDomain))) {
+      return 'Disposable email addresses are not allowed.';
+    }
+    return '';
+  }
+
+  function validateSignupField(input) {
+    const value = input.value;
+    let message = '';
+
+    if (input.id === 'suName') {
+      const name = value.trim();
+      if (!name) message = 'Full name is required.';
+      else if (name.length < 2 || name.length > 60) message = 'Name must be between 2 and 60 characters.';
+      else if (!/^[A-Za-z][A-Za-z .'-]*$/.test(name)) message = 'Name may only contain letters, spaces, hyphens, apostrophes, and dots.';
+      else if (name.trim().split(/\s+/).length < 2) message = 'Enter your first and last name.';
+      else if (!/[aeiou]/i.test(name)) message = 'Name must contain a vowel.';
+      else if (/(.)\1{3,}/.test(name)) message = 'Name cannot repeat the same character 4 or more times in a row.';
+      else if (/\s{2,}/.test(name)) message = 'Name cannot contain multiple consecutive spaces.';
+      else if (!/[A-Za-z]{2,}/.test(name)) message = 'Please enter a valid name.';
+    } else if (input.id === 'suEmail') {
+      message = value.trim() ? emailValidationMessage(value, true) : 'Email address is required.';
+    } else if (input.id === 'suPass') {
+      const passwordBytes = new TextEncoder().encode(value).length;
+      if (!value) message = 'Password is required.';
+      else if (passwordBytes < 8 || passwordBytes > 64 || !/[a-z]/.test(value) || !/[A-Z]/.test(value) || !/[0-9]/.test(value) || !/[^A-Za-z0-9]/.test(value)) {
+        message = 'Password must be 8-64 characters and include lowercase, uppercase, a number, and a symbol.';
+      }
+    } else if (input.id === 'suPassConfirm') {
+      if (!value) message = 'Please confirm your password.';
+      else if (value !== document.getElementById('suPass').value) message = 'Passwords do not match.';
+    }
+
+    input.setCustomValidity(message);
+    return message;
+  }
+
+  document.querySelectorAll('#signupForm input').forEach(input => {
+    input.addEventListener('input', () => {
+      validateSignupField(input);
+      if (input.id === 'suPass') validateSignupField(document.getElementById('suPassConfirm'));
+    });
+    input.addEventListener('blur', () => validateSignupField(input));
+  });
+
+  function readLocalData(key, fallback) {
+    try {
+      return JSON.parse(localStorage.getItem(key) || 'null') || fallback;
+    } catch (err) {
+      return fallback;
+    }
+  }
+
+  function writeLocalData(key, value) {
+    try {
+      localStorage.setItem(key, JSON.stringify(value));
+    } catch (err) {
+      showAlert('error', 'Saved in XAMPP, but browser Local Storage is full or unavailable.');
+    }
+  }
+
+  async function postApi(action, data) {
+    const response = await fetch('api.php?action=' + action, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data)
+    });
+    let result;
+    try {
+      result = await response.json();
+    } catch (err) {
+      throw new Error('XAMPP did not return a valid response. Open this site through http://localhost/phishshield/.');
+    }
+    return { response, result };
+  }
+
+  async function handleSignup(e) {
+    e.preventDefault();
+    const signupForm = document.getElementById('signupForm');
+    const signupInputs = signupForm.querySelectorAll('input');
+    signupInputs.forEach(validateSignupField);
+    if (!signupForm.checkValidity()) {
+      const invalidInput = signupForm.querySelector(':invalid');
+      showAlert('error', invalidInput.validationMessage);
+      invalidInput.focus();
+      return;
+    }
+
+    const name = document.getElementById('suName').value.trim();
+    const email = document.getElementById('suEmail').value.trim().toLowerCase();
+    const pass = document.getElementById('suPass').value;
+
+    let response;
+    let result;
+    try {
+      ({ response, result } = await postApi('signup', { name, email, password: pass, password_confirmation: document.getElementById('suPassConfirm').value }));
+    } catch (err) {
+      showAlert('error', err.message || 'Cannot connect to XAMPP. Open this site through http://localhost/phishshield/.');
+      return;
+    }
+    if (!response.ok) {
+      if (response.status === 409) {
+        switchTab('login');
+        document.getElementById('loginEmail').value = email;
+      }
+      showAlert('error', result.error || 'Could not create account.');
+      return;
+    }
+
+    switchTab('login');
+    document.getElementById('loginEmail').value = email;
+    document.getElementById('loginPass').focus();
+    showAlert('success', result.message || 'Account created successfully. Please log in.');
+  }
+
+  async function handleLogin(e) {
+    e.preventDefault();
+    const email = document.getElementById('loginEmail').value.trim().toLowerCase();
+    const pass = document.getElementById('loginPass').value;
+
+    const emailError = email ? emailValidationMessage(email, false) : 'Email address is required.';
+    if (emailError) {
+      showAlert('error', emailError);
+      document.getElementById('loginEmail').focus();
+      return;
+    }
+    if (!pass) {
+      showAlert('error', 'Password is required.');
+      document.getElementById('loginPass').focus();
+      return;
+    }
+    if (new TextEncoder().encode(pass).length > 64) {
+      showAlert('error', 'Password must be no more than 64 characters.');
+      document.getElementById('loginPass').focus();
+      return;
+    }
+
+    let response;
+    let result;
+    try {
+      ({ response, result } = await postApi('login', { email, password: pass }));
+    } catch (err) {
+      showAlert('error', err.message || 'Cannot connect to XAMPP. Open this site through http://localhost/phishshield/.');
+      return;
+    }
+    if (!response.ok) { showAlert('error', result.error || 'Login failed.'); return; }
+
+    sessionStorage.setItem('ps_current', JSON.stringify(result.user));
+    writeLocalData('ps_user', result.user);
+    const users = readLocalData('ps_users', {});
+    users[email] = { name: result.user.name, created: users[email]?.created || new Date().toISOString() };
+    writeLocalData('ps_users', users);
+    const logins = readLocalData('ps_logins', []);
+    logins.unshift({ email, date: new Date().toISOString() });
+    writeLocalData('ps_logins', logins.slice(0, 100));
+    showAlert('success', 'Login successful! Loading dashboard...');
+    setTimeout(() => { window.location.replace('index.html'); }, 900);
+  }
+
+  // ------------------------------------------------------------
+  //  If a VALID session already exists → jump to dashboard.
+  //  Otherwise clean any partial session and stay on login page.
+  // ------------------------------------------------------------
+  try {
+    document.querySelectorAll('#loginForm input, #signupForm input').forEach(input => {
+      input.value = '';
+      input.addEventListener('pointerdown', () => input.removeAttribute('readonly'), { once: true });
+      input.addEventListener('focus', () => input.removeAttribute('readonly'), { once: true });
+    });
+    window.addEventListener('pageshow', () => {
+      document.querySelectorAll('#loginForm input, #signupForm input').forEach(input => { input.value = ''; });
+    });
+    const saved = JSON.parse(sessionStorage.getItem('ps_current') || 'null');
+    if (saved && saved.email && saved.name) {
+      window.location.replace('index.html');
+    } else {
+      sessionStorage.removeItem('ps_current');
+    }
+  } catch (err) {
+    sessionStorage.removeItem('ps_current');
+  }
+</script>
+</body>
+</html>

@@ -1,0 +1,555 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<script>
+  if (location.port === '5500') {
+    location.replace('http://localhost/phishshield/index.html');
+  }
+</script>
+<title>PhishShield AI · Dashboard</title>
+<script>
+  try {
+    const current = JSON.parse(sessionStorage.getItem('ps_current') || 'null');
+    if (!current || !current.email || !current.name) window.location.replace('login.html');
+  } catch (err) {
+    window.location.replace('login.html');
+  }
+</script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" />
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+  try {
+    if (localStorage.getItem('ps_theme') === 'dark') document.documentElement.classList.add('dark');
+  } catch (err) {
+    console.error('Could not load saved theme:', err);
+  }
+</script>
+<style>
+  :root { --bg-grad: linear-gradient(145deg,#eef5fb,#e2ebf3); --card-bg: rgba(255,255,255,.8); --text: #0a1e2f; --subtext: #5a7a94; }
+  html.dark { --bg-grad: linear-gradient(145deg,#0a1622,#0f2233); --card-bg: rgba(20,35,50,.7); --text: #e6f0f9; --subtext: #8fa8bd; }
+  * { margin:0; padding:0; box-sizing:border-box; font-family:'Segoe UI', Roboto, sans-serif; }
+  body {
+    background: var(--bg-grad);
+    min-height:100vh; padding:1.5rem;
+  }
+  .wrap { max-width:1300px; margin:0 auto; }
+
+  .topbar {
+    display:flex; justify-content:space-between; align-items:center;
+    background: var(--card-bg); backdrop-filter: blur(14px);
+    border-radius:24px; padding:1rem 1.6rem;
+    border:1px solid rgba(255,255,255,0.8);
+    box-shadow:0 8px 24px rgba(0,40,80,0.06);
+    margin-bottom:1.5rem; flex-wrap:wrap; gap:12px;
+  }
+  .brand { display:flex; align-items:center; gap:12px; }
+  .brand .ico {
+    width:44px; height:44px; border-radius:14px;
+    background: linear-gradient(135deg, #0b2b4b, #1a4b6d);
+    display:flex; align-items:center; justify-content:center;
+    color:#fff; font-size:22px; box-shadow:0 8px 18px rgba(11,43,75,0.25);
+  }
+  .brand h1 { font-size:1.35rem; color:var(--text); }
+  .brand h1 span { font-weight:400; font-size:0.75rem; color:#2c5a7a; background:#e6f0f9; padding:3px 10px; border-radius:20px; margin-left:8px; }
+  .user-area { display:flex; align-items:center; gap:14px; }
+  .learn-btn {
+    background: linear-gradient(135deg,#5a3fc0,#8b6ae0);
+    color:#fff; border:none; padding:0.55rem 1.2rem;
+    border-radius:12px; font-weight:700; cursor:pointer; font-size:0.85rem;
+    display:inline-flex; align-items:center; gap:8px; transition:0.15s;
+    text-decoration:none;
+    box-shadow:0 6px 16px rgba(90,63,192,0.3);
+  }
+  .learn-btn:hover { transform:translateY(-2px); box-shadow:0 10px 22px rgba(90,63,192,0.4); }
+  .greet { text-align:right; }
+  .greet .name { font-weight:700; color:var(--text); font-size:0.95rem; }
+  .greet .sub { font-size:0.75rem; color:var(--subtext); }
+  .theme-toggle { width:38px; height:38px; border:0; border-radius:12px; background:var(--card-bg); color:var(--text); cursor:pointer; font-size:1rem; }
+  .avatar {
+    width:44px; height:44px; border-radius:50%;
+    background: linear-gradient(135deg,#1b6d4a,#3d9ad6);
+    color:#fff; display:flex; align-items:center; justify-content:center;
+    font-weight:700; font-size:1rem; box-shadow:0 6px 14px rgba(0,0,0,0.12);
+  }
+  .logout {
+    background:#fde8e8; color:#b13e3e; border:none; padding:0.5rem 1rem;
+    border-radius:12px; font-weight:600; cursor:pointer; font-size:0.85rem; transition:0.15s;
+  }
+  .logout:hover { background:#f8d0d0; }
+
+  .stats {
+    display:grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap:14px; margin-bottom:1.5rem;
+  }
+  .dashboard-analytics { margin-bottom:2rem; }
+  .grid-2 { display:grid; grid-template-columns:2fr 1fr; gap:16px; margin-bottom:1.2rem; }
+  .chart-card, .threat-card {
+    background:var(--card-bg); backdrop-filter:blur(12px); border-radius:22px;
+    padding:1.3rem; border:1px solid rgba(255,255,255,0.9); box-shadow:0 8px 24px rgba(0,40,80,0.06);
+  }
+  .chart-card h2, .threat-card h2 { color:var(--text); font-size:1rem; margin-bottom:0.8rem; }
+  .chart-wrap { height:220px; position:relative; }
+  .threat-card { margin-bottom:1.2rem; }
+  .threat-list { list-style:none; display:grid; gap:8px; }
+  .threat-item { display:flex; justify-content:space-between; gap:12px; background:rgba(248,251,254,0.8); padding:0.75rem; border-radius:12px; overflow-wrap:anywhere; }
+  .analytics-error { color:#b13e3e; font-size:0.85rem; }
+  .stat-card {
+    background: var(--card-bg); backdrop-filter:blur(10px);
+    border-radius:20px; padding:1.2rem 1.4rem;
+    border:1px solid rgba(255,255,255,0.8);
+    box-shadow:0 6px 20px rgba(0,40,80,0.05);
+    display:flex; align-items:center; gap:14px;
+    transition:0.2s;
+  }
+  .stat-card:hover { transform:translateY(-3px); box-shadow:0 12px 28px rgba(0,40,80,0.1); }
+  .stat-ico {
+    width:48px; height:48px; border-radius:14px; display:flex; align-items:center; justify-content:center; font-size:20px;
+  }
+  .stat-ico.blue { background:#e0eefb; color:#1a5a8a; }
+  .stat-ico.green { background:#d9f2e3; color:#1b6d4a; }
+  .stat-ico.red { background:#fde2e2; color:#b13e3e; }
+  .stat-ico.amber { background:#fdf0d5; color:#a06a1a; }
+  .stat-card .num { font-size:1.5rem; font-weight:800; color:var(--text); line-height:1; }
+  .stat-card .lbl { font-size:0.8rem; color:var(--subtext); margin-top:4px; font-weight:500; }
+
+  .hero {
+    background: linear-gradient(135deg, #0b2b4b, #1a4b6d 60%, #1b6d4a);
+    border-radius:28px; padding:2rem 2.5rem; color:#fff;
+    margin-bottom:1.8rem; position:relative; overflow:hidden;
+    box-shadow:0 20px 40px rgba(11,43,75,0.25);
+  }
+  .hero::after {
+    content:""; position:absolute; width:300px; height:300px; border-radius:50%;
+    background: radial-gradient(circle, rgba(61,154,214,0.35), transparent 70%);
+    right:-80px; top:-80px;
+  }
+  .hero h2 { font-size:1.6rem; margin-bottom:0.5rem; position:relative; z-index:1; }
+  .hero p { opacity:0.85; font-size:0.95rem; max-width:640px; line-height:1.5; position:relative; z-index:1; }
+  .hero .pill {
+    display:inline-flex; align-items:center; gap:8px; margin-top:1rem;
+    background: rgba(255,255,255,0.15); padding:0.4rem 1rem; border-radius:20px;
+    font-size:0.8rem; font-weight:600; position:relative; z-index:1;
+  }
+  .hero-actions {
+    margin-top:1.2rem; display:flex; gap:10px; flex-wrap:wrap; position:relative; z-index:1;
+  }
+  .hero-actions a {
+    text-decoration:none; font-weight:700; font-size:0.85rem;
+    padding:0.65rem 1.3rem; border-radius:12px; transition:0.15s;
+    display:inline-flex; align-items:center; gap:8px;
+  }
+  .ha-primary { background:#fff; color:#0b2b4b; }
+  .ha-primary:hover { background:#e6f0f9; transform:translateY(-2px); }
+  .ha-ghost { background: rgba(255,255,255,0.15); color:#fff; border:1px solid rgba(255,255,255,0.3); }
+  .ha-ghost:hover { background: rgba(255,255,255,0.25); transform:translateY(-2px); }
+
+  .section-title { font-size:1.05rem; font-weight:700; color:var(--text); margin-bottom:1rem; display:flex; align-items:center; gap:10px; }
+  .section-title i { color:#1a6b94; }
+  .section-title .sub { font-weight:400; font-size:0.8rem; color:#6a8399; margin-left:auto; }
+
+  .learn-strip {
+    display:grid; grid-template-columns: repeat(auto-fit, minmax(220px,1fr));
+    gap:14px; margin-bottom:2rem;
+  }
+  .learn-mini {
+    background: rgba(255,255,255,0.75); backdrop-filter:blur(10px);
+    border-radius:20px; padding:1.2rem 1.3rem;
+    border:1px solid rgba(255,255,255,0.9);
+    box-shadow:0 6px 20px rgba(0,40,80,0.05);
+    transition:0.2s;
+  }
+  .learn-mini:hover { transform:translateY(-3px); box-shadow:0 12px 28px rgba(0,40,80,0.1); }
+  .learn-mini .ico {
+    width:44px; height:44px; border-radius:14px;
+    display:flex; align-items:center; justify-content:center;
+    font-size:20px; color:#fff; margin-bottom:10px;
+  }
+  .learn-mini h4 { font-size:0.95rem; color:var(--text); margin-bottom:5px; }
+  .learn-mini p { font-size:0.82rem; color:var(--subtext); line-height:1.5; }
+
+  .how {
+    background: rgba(255,255,255,0.75); backdrop-filter:blur(10px);
+    border-radius:24px; padding:1.6rem 1.8rem;
+    border:1px solid rgba(255,255,255,0.9);
+    box-shadow:0 6px 20px rgba(0,40,80,0.05);
+    margin-bottom:2rem;
+  }
+  .how-steps {
+    display:grid; grid-template-columns: repeat(auto-fit, minmax(200px,1fr));
+    gap:16px; margin-top:1rem;
+  }
+  .how-step { position:relative; padding-left:56px; }
+  .how-step .num {
+    position:absolute; left:0; top:0;
+    width:42px; height:42px; border-radius:12px;
+    background: linear-gradient(135deg,#0b2b4b,#1a4b6d);
+    color:#fff; display:flex; align-items:center; justify-content:center;
+    font-weight:800; font-size:1rem;
+    box-shadow:0 6px 14px rgba(11,43,75,0.25);
+  }
+  .how-step h4 { color:var(--text); font-size:0.95rem; margin-bottom:4px; }
+  .how-step p { color:var(--subtext); font-size:0.82rem; line-height:1.5; }
+
+  .actions {
+    display:grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap:16px; margin-bottom:2rem;
+  }
+  .action-tile {
+    background: var(--card-bg); backdrop-filter:blur(10px);
+    border:1px solid rgba(255,255,255,0.9);
+    border-radius:22px; padding:1.4rem 1.4rem 1.2rem;
+    cursor:pointer; transition:0.2s; text-decoration:none; color:inherit;
+    display:flex; flex-direction:column; gap:10px;
+    box-shadow:0 6px 20px rgba(0,40,80,0.05);
+    position:relative; overflow:hidden;
+  }
+  .action-tile:hover { transform:translateY(-5px); box-shadow:0 16px 36px rgba(0,40,80,0.12); }
+  .action-tile .t-ico {
+    width:52px; height:52px; border-radius:16px;
+    display:flex; align-items:center; justify-content:center; font-size:24px; color:#fff;
+    box-shadow:0 8px 18px rgba(0,0,0,0.1);
+  }
+  .t-blue   { background: linear-gradient(135deg,#3d9ad6,#1a5a8a); }
+  .t-green  { background: linear-gradient(135deg,#3eb87a,#1b6d4a); }
+  .t-purple { background: linear-gradient(135deg,#8b6ae0,#5a3fc0); }
+  .t-amber  { background: linear-gradient(135deg,#e0a94a,#b1761f); }
+  .t-red    { background: linear-gradient(135deg,#e05a5a,#b13e3e); }
+  .t-slate  { background: linear-gradient(135deg,var(--subtext),#3a5470); }
+  .t-pink   { background: linear-gradient(135deg,#e056a0,#a03070); }
+  .action-tile h3 { font-size:1rem; color:var(--text); }
+  .action-tile p { font-size:0.82rem; color:var(--subtext); line-height:1.4; }
+  .action-tile .soon {
+    position:absolute; top:12px; right:12px;
+    background:#fdf0d5; color:#a06a1a; font-size:0.65rem; font-weight:700;
+    padding:3px 8px; border-radius:20px; letter-spacing:0.4px;
+  }
+  .action-tile .arrow {
+    margin-top:auto; font-size:0.8rem; font-weight:600; color:#1a6b94;
+    display:flex; align-items:center; gap:6px;
+  }
+
+  .footer {
+    text-align:center; padding:1.5rem 0 0.5rem; font-size:0.8rem; color:#6a8399;
+    border-top:1px solid rgba(0,0,0,0.05); margin-top:1rem;
+    display:flex; justify-content:center; gap:22px; flex-wrap:wrap;
+  }
+  .footer span i { color:#1b6d4a; margin-right:5px; }
+
+  .toast {
+    position:fixed; bottom:30px; left:50%; transform:translateX(-50%) translateY(120px);
+    background:#0b2b4b; color:#fff; padding:0.9rem 1.6rem; border-radius:60px;
+    font-weight:600; font-size:0.9rem; box-shadow:0 14px 40px rgba(0,0,0,0.3);
+    display:flex; align-items:center; gap:10px; z-index:999;
+    transition: transform 0.35s cubic-bezier(.2,1.4,.4,1); pointer-events:none;
+  }
+  .toast.show { transform:translateX(-50%) translateY(0); }
+  .toast i { color:#7fd6a8; }
+  @media (max-width:700px) { .grid-2 { grid-template-columns:1fr; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="topbar">
+    <div class="brand">
+      <div class="ico"><i class="fas fa-shield-halved"></i></div>
+      <h1>PhishShield <span>AI</span></h1>
+    </div>
+    <div class="user-area">
+      <a href="learn.html" class="learn-btn"><i class="fas fa-graduation-cap"></i> Learn About Phishing</a>
+      <div class="greet">
+        <div class="name" id="userName">User</div>
+        <div class="sub">Protected · Session active</div>
+      </div>
+      <div class="avatar" id="avatar">U</div>
+      <button class="theme-toggle" id="themeToggle" type="button" aria-label="Switch to dark mode"><i class="fas fa-moon"></i></button>
+      <button class="logout" onclick="logout()"><i class="fas fa-right-from-bracket"></i> Logout</button>
+    </div>
+  </div>
+
+  <div class="stats">
+    <div class="stat-card">
+      <div class="stat-ico blue"><i class="fas fa-magnifying-glass"></i></div>
+      <div><div class="num" id="statScans">0</div><div class="lbl">Total Scans</div></div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-ico red"><i class="fas fa-triangle-exclamation"></i></div>
+      <div><div class="num" id="statThreats">0</div><div class="lbl">Threats Found</div></div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-ico green"><i class="fas fa-circle-check"></i></div>
+      <div><div class="num" id="statSafe">0</div><div class="lbl">Safe Results</div></div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-ico amber"><i class="fas fa-percent"></i></div>
+      <div><div class="num" id="statFalsePositive">0.0%</div><div class="lbl">False Positive Rate</div></div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-ico amber"><i class="fas fa-exclamation"></i></div>
+      <div><div class="num" id="statCaution">0</div><div class="lbl">Suspicious</div></div>
+    </div>
+  </div>
+
+  <div class="dashboard-analytics">
+    <div class="grid-2">
+      <section class="chart-card">
+        <h2><i class="fas fa-chart-line"></i> Scan trend · last 7 days</h2>
+        <div class="chart-wrap"><canvas id="trendChart"></canvas></div>
+      </section>
+      <section class="chart-card">
+        <h2><i class="fas fa-chart-pie"></i> Verdict split</h2>
+        <div class="chart-wrap"><canvas id="pieChart"></canvas></div>
+      </section>
+    </div>
+    <section class="threat-card">
+      <h2><i class="fas fa-globe"></i> Community Threat Blocklist</h2>
+      <ul class="threat-list" id="threatList"><li>Loading community reports…</li></ul>
+    </section>
+  </div>
+
+  <div class="hero">
+    <h2>Real-time phishing protection ⚡</h2>
+    <p>Paste an email, URL, or message — our AI analyses it instantly using heuristic + ML pattern detection. All processing happens <b>on-device</b>. No content is ever stored or uploaded.</p>
+    <div class="pill"><i class="fas fa-lock"></i> Hybrid AI · Explainable · Community Threat Intel · Quishing Protection</div>
+    <div class="hero-actions">
+      <a href="scan.html#email" class="ha-primary"><i class="fas fa-bolt"></i> Start Scanning</a>
+      <a href="learn.html" class="ha-ghost"><i class="fas fa-book-open"></i> What is Phishing?</a>
+    </div>
+  </div>
+
+  <div class="section-title">
+    <i class="fas fa-graduation-cap"></i> Phishing 101
+    <span class="sub">Know the threat before you scan</span>
+  </div>
+  <div class="learn-strip">
+    <div class="learn-mini">
+      <div class="ico t-blue"><i class="fas fa-fish"></i></div>
+      <h4>What is Phishing?</h4>
+      <p>A cyber attack where criminals impersonate trusted brands to steal your passwords, money, or identity.</p>
+    </div>
+    <div class="learn-mini">
+      <div class="ico t-red"><i class="fas fa-envelope"></i></div>
+      <h4>Email Phishing</h4>
+      <p>Fake emails that look like they're from your bank, PayPal, or employer — with a malicious link or attachment.</p>
+    </div>
+    <div class="learn-mini">
+      <div class="ico t-amber"><i class="fas fa-globe"></i></div>
+      <h4>Website Spoofing</h4>
+      <p>Fake login pages that mimic real ones (paypal-secure.xyz). You type your password — they steal it.</p>
+    </div>
+    <div class="learn-mini">
+      <div class="ico t-purple"><i class="fas fa-comment-dots"></i></div>
+      <h4>Smishing / Vishing</h4>
+      <p>Phishing via SMS (smishing) or voice calls (vishing) — asking you to "verify" your account.</p>
+    </div>
+  </div>
+
+  <div class="how">
+    <div class="section-title"><i class="fas fa-cogs"></i> How PhishShield Works</div>
+    <div class="how-steps">
+      <div class="how-step">
+        <div class="num">1</div>
+        <h4>You Paste Content</h4>
+        <p>Drop an email, message, or URL into the scanner.</p>
+      </div>
+      <div class="how-step">
+        <div class="num">2</div>
+        <h4>AI Analyzes Locally</h4>
+        <p>Weighted keyword scoring + URL structure analysis runs in your browser.</p>
+      </div>
+      <div class="how-step">
+        <div class="num">3</div>
+        <h4>Risk Score Generated</h4>
+        <p>You get a 0-100 risk score with a full list of suspicious indicators.</p>
+      </div>
+      <div class="how-step">
+        <div class="num">4</div>
+        <h4>Verdict: Safe / Caution / Phishing</h4>
+        <p>Clear verdict — nothing is uploaded. Your data stays on your device.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="section-title"><i class="fas fa-bolt"></i> Quick actions</div>
+  <div class="actions">
+    <a href="learn.html" class="action-tile">
+      <div class="t-ico t-pink"><i class="fas fa-graduation-cap"></i></div>
+      <h3>Learn About Phishing</h3>
+      <p>Complete guide: types, examples, red flags & prevention tips.</p>
+      <div class="arrow">Open guide <i class="fas fa-arrow-right"></i></div>
+    </a>
+
+    <a href="history.html" class="action-tile">
+      <div class="t-ico t-slate"><i class="fas fa-clock-rotate-left"></i></div>
+      <h3>History</h3>
+      <p>Review all previous scans and detected threats.</p>
+      <div class="arrow">View history <i class="fas fa-arrow-right"></i></div>
+    </a>
+
+    <a href="qr.html" class="action-tile">
+      <div class="t-ico t-pink"><i class="fas fa-qrcode"></i></div>
+      <h3>Scan QR Code <span style="font-size:.65rem;background:#fdf0d5;color:#a06a1a;padding:2px 8px;border-radius:20px;margin-left:4px;">NEW</span></h3>
+      <p>Upload a QR code image — we decode and analyze the hidden URL (quishing protection).</p>
+      <div class="arrow">Open scanner <i class="fas fa-arrow-right"></i></div>
+    </a>
+
+    <a href="scan.html" class="action-tile">
+      <div class="t-ico t-amber"><i class="fas fa-bolt"></i></div>
+      <h3>Live Scanner</h3>
+      <p>Real-time URL scan, bulk scan, and live threat feed</p>
+      <div class="arrow">Open <i class="fas fa-arrow-right"></i></div>
+    </a>
+
+    <a href="threats.html" class="action-tile">
+      <div class="t-ico t-red"><i class="fas fa-globe"></i></div>
+      <h3>Threat Map</h3>
+      <p>Global phishing TLD map and top reporter leaderboard</p>
+      <div class="arrow">Open <i class="fas fa-arrow-right"></i></div>
+    </a>
+
+  </div>
+
+<div class="toast" id="toast"><i class="fas fa-circle-info"></i><span id="toastText">Coming soon</span></div>
+
+<script>
+  // ============================================================
+  //  STRICT AUTH GUARD — no session → login page
+  // ============================================================
+  (function() {
+    try {
+      const c = JSON.parse(sessionStorage.getItem('ps_current') || 'null');
+      if (!c || !c.email || !c.name) {
+        sessionStorage.removeItem('ps_current');
+        window.location.replace('login.html');
+        throw new Error('unauthenticated');
+      }
+      window.__currentUser = c;
+    } catch (e) {
+      window.location.replace('login.html');
+    }
+  })();
+
+  // If redirect was triggered, avoid running the rest
+  if (window.__currentUser) {
+    const name = window.__currentUser.name;
+    document.getElementById('userName').textContent = name;
+    document.getElementById('avatar').textContent = name.charAt(0).toUpperCase();
+
+    let trendChart = null;
+    let pieChart = null;
+
+    function drawCharts(history) {
+      if (typeof window.Chart !== 'function') return;
+      const trendCanvas = document.getElementById('trendChart');
+      const pieCanvas = document.getElementById('pieChart');
+      if (!trendCanvas || !pieCanvas) return;
+      const days = [];
+      const counts = [];
+      for (let offset = 6; offset >= 0; offset--) {
+        const date = new Date();
+        date.setHours(0, 0, 0, 0);
+        date.setDate(date.getDate() - offset);
+        const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+        days.push(date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' }));
+        counts.push(history.filter(item => item.date.slice(0, 10) === key).length);
+      }
+      const totals = ['safe', 'caution', 'phishing'].map(status => history.filter(item => item.status === status).length);
+      if (trendChart) {
+        trendChart.data.labels = days;
+        trendChart.data.datasets[0].data = counts;
+        trendChart.update();
+      } else {
+        trendChart = new Chart(trendCanvas, {
+          type: 'line',
+          data: { labels: days, datasets: [{ label: 'Scans', data: counts, borderColor: '#1a6b94', backgroundColor: 'rgba(61,154,214,0.18)', fill: true, tension: 0.35 }] },
+          options: { responsive: true, maintainAspectRatio: false }
+        });
+      }
+      if (pieChart) {
+        pieChart.data.datasets[0].data = totals;
+        pieChart.update();
+      } else {
+        pieChart = new Chart(pieCanvas, {
+          type: 'doughnut',
+          data: { labels: ['Safe', 'Caution', 'Phishing'], datasets: [{ data: totals, backgroundColor: ['#3eb87a', '#e0a94a', '#e05a5a'] }] },
+          options: { responsive: true, maintainAspectRatio: false }
+        });
+      }
+    }
+
+    async function loadThreats() {
+      const list = document.getElementById('threatList');
+      try {
+        const response = await fetch('api.php?action=threat-list', { credentials: 'same-origin' });
+        const result = await response.json();
+        if (!response.ok) throw new Error(result.error || 'Could not load community reports.');
+        list.innerHTML = result.threats.length
+          ? result.threats.map(item => `<li class="threat-item"><span><i class="fas fa-ban"></i> ${escapeHtml(item.domain)}<br><small>${escapeHtml(item.reason || '')}</small></span><b>${Number(item.votes)} votes</b></li>`).join('')
+          : '<li class="threat-item">No community reports yet. <a href="scan.html#website">Scan a suspicious URL</a> and report it to add it here.</li>';
+      } catch (err) {
+        list.innerHTML = `<li class="analytics-error">${escapeHtml(err.message)}</li>`;
+      }
+    }
+
+    function escapeHtml(value) {
+      return String(value).replace(/[&<>"']/g, character => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+      }[character]));
+    }
+
+    async function loadStats() {
+      try {
+        const response = await fetch('api.php?action=history', { credentials: 'same-origin' });
+        const result = await response.json();
+        if (!response.ok) throw new Error(result.error || 'Could not load scan statistics.');
+        const history = result.history;
+        drawCharts(history);
+        document.getElementById('statScans').textContent = history.length;
+        document.getElementById('statThreats').textContent = history.filter(h => h.status === 'phishing').length;
+        document.getElementById('statSafe').textContent = history.filter(h => h.status === 'safe').length;
+        const cautionCount = history.filter(h => h.status === 'caution').length;
+        document.getElementById('statCaution').textContent = cautionCount;
+        document.getElementById('statFalsePositive').textContent =
+          (history.length ? cautionCount / history.length * 100 : 0).toFixed(1) + '%';
+      } catch (err) {
+        drawCharts([]);
+        console.error('Could not load dashboard statistics:', err);
+      }
+    }
+    loadStats();
+    loadThreats();
+
+    window.comingSoon = function(feature) {
+      const toast = document.getElementById('toast');
+      document.getElementById('toastText').textContent = feature + ' — arriving in the next sprint';
+      toast.classList.add('show');
+      clearTimeout(window.__toastTimer);
+      window.__toastTimer = setTimeout(() => toast.classList.remove('show'), 2800);
+    };
+
+    window.logout = function() {
+      if (confirm('Logout from PhishShield?')) {
+        fetch('api.php?action=logout', { method: 'POST', credentials: 'same-origin' })
+          .finally(() => {
+            sessionStorage.removeItem('ps_current');
+            window.location.replace('login.html');
+          });
+      }
+    };
+  }
+</script>
+<script>
+  const themeToggle = document.getElementById('themeToggle');
+  function applyTheme(theme) {
+    document.documentElement.classList.toggle('dark', theme === 'dark');
+    themeToggle.innerHTML = theme === 'dark' ? '<i class="fas fa-sun"></i>' : '<i class="fas fa-moon"></i>';
+    themeToggle.setAttribute('aria-label', theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode');
+    localStorage.setItem('ps_theme', theme);
+  }
+  applyTheme(document.documentElement.classList.contains('dark') ? 'dark' : 'light');
+  themeToggle.addEventListener('click', () => applyTheme(document.documentElement.classList.contains('dark') ? 'light' : 'dark'));
+</script>
+</body>
+</html>
