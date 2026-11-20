@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # PhishShield
 
 ## Setup
@@ -26,3 +27,7 @@ Replace the placeholder with your key. Do not put the key in an HTML, JavaScript
 After setting the environment variable, fully restart the XAMPP Control Panel and Apache so Apache inherits the updated environment. The private PHP config file is loaded on each request and does not require an Apache restart. If Apache runs as a Windows service, set the variable in the system environment available to that service. Ensure PHP's cURL extension is enabled. Without a usable key or cURL, the chatbot displays an explicit configuration error instead of returning a canned answer.
 
 The assistant sends the current message and up to 10 prior conversation messages to Google Gemini. Current-information questions may also use Google Search grounding; returned grounding links are shown as sources. Conversation history stays in the current page and the **New chat** button clears it. Scan history and scanner inputs are not loaded or sent automatically. Do not include private scan content in a chat unless you intend to send that text to Google.
+=======
+# Project-Phase-I-2026-27
+All Students should upload Project related all doc and readme as well as requirenment .txt file  along with code and database
+>>>>>>> ffb4769d18865c39bc5d87b6ae43565479391935
